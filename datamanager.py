@@ -96,20 +96,56 @@ def insert_lexisnexis(pathwithlnfiles,recursive):
 				else:
 					 tekst[artikel]=tekst[artikel]+line
 	print "Done!",artikel,"articles added."
-	"""
-	print len(journal)
-	print len(loaddate)
-	print len(section)
-	print len(language)
-	print len(byline)
-	print len(length)
-	print len(tekst)
-	"""
 
+	if not len(journal) == len(loaddate) == len(section) == len(language) == len(byline) == len(length) == len(tekst):
+		print "!!!!!!!!!!!!!!!!!!!!!!!!!"
+		print "Ooooops! Not all articles seem to have data for each field. These are the numbers of fields that where correctly coded (and, of course, they should be equal to the number of articles, which they aren't in all cases."
+		print "journal",len(journal)
+		print "loaddate",len(loaddate)
+		print "section",len(section)
+		print "language",len(language)
+		print "byline",len(byline)
+		print "length",len(length)
+		print "tekst",len(tekst)
+		print "!!!!!!!!!!!!!!!!!!!!!!!!!"
+		print 
+		print "Anyhow, we're gonna proceed and set those invalid fields to 'NA'. However, you should be aware of this when analyzing your data!"
+		
+
+	else:
+		print "No missing values encountered."
+	
 	for i in range(artikel):
-		art={"source":journal[i+1],"date":loaddate[i+1],"section":section[i+1],"language":language[i+1],"length":length[i+1],"text":tekst[i+1],"from-database":"lexisnexis"}
+		try:
+			art_source=journal[i+1]
+		except:
+			art_source="NA"
+		try:
+			art_date=loaddate[i+1]
+		except:
+			art_date="NA"
+		try:
+			art_section=section[i+1]
+		except:
+			art_section="NA"
+		try:
+			art_language=language[i+1]
+		except:
+			art_language="NA"
+		try:
+			art_length=length[i+1]
+		except:
+			art_length="NA"
+		try:
+			art_text=tekst[i+1]
+		except:
+			art_text="NA"
+		try:
+			art_byline=byline[i+1]
+		except:
+			art_byline="NA"
+		art={"source":art_source,"date":art_date,"section":art_section,"language":art_language,"length":art_length,"text":art_text,"byline":art_byline,"from-database":"lexisnexis"}
 		article_id=collection.insert(art)
-		# "byline":byline[i+1] vervalt, werkt kennelijk niet altijd
 
 
 
