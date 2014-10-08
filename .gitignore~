@@ -54,7 +54,7 @@ docs/_build/
 target/
 
 # privacygevoelige bestanden van amedatk
-config.conf
+./config.conf
 
 # input en output data
 input/

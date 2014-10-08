@@ -53,9 +53,14 @@ docs/_build/
 # PyBuilder
 target/
 
+
+
 # privacygevoelige bestanden van amedatk
 ./config.conf
 
 # input en output data
 input/
 output/
+
+# geen emacs-backupbestanden committen
+*.*~
