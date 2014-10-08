@@ -56,11 +56,12 @@ target/
 
 
 # privacygevoelige bestanden van amedatk
-./config.conf
+config.conf
 
 # input en output data
 input/
 output/
 
 # geen emacs-backupbestanden committen
-*.*~
+*~
+
