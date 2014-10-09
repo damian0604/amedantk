@@ -39,6 +39,16 @@ print "Done building index."
 
 
 
+def stemmed(text,language):
+	stemmer= SnowballStemmer(language)
+	tas=text.split()
+	text=""
+	for word in tas:
+		text=" ".join((text,stemmer.stem(word)))
+	return text.lstrip()
+
+
+
 def split2ngrams(txt, n):
 	if n==1:
 		return txt.split()
@@ -59,7 +69,10 @@ def frequencies_nodict():
     #stemmer=SnowballStemmer("dutch")
     #knownwords = set([stemmer.stem(line.strip().replace(" ","_").lower()) for line in open(dictionaryfile,mode="r",encoding="utf-8")])
     
-    knownwords = set([line.strip().replace(" ","_").lower() for line in open(dictionaryfile,mode="r",encoding="utf-8")])
+    if stemming==0:
+	    knownwords = set([line.strip().replace(" ","_").lower() for line in open(dictionaryfile,mode="r",encoding="utf-8")])
+    else:
+	    knownwords = set([stemmed(line.strip().replace(" ","_").lower(),stemming_language) for line in open(dictionaryfile,mode="r",encoding="utf-8")])
 
     all=collectioncleaned.find(subset,{"text": 1, "_id":0})
     aantal=all.count()
@@ -70,8 +83,11 @@ def frequencies_nodict():
        i+=1
        print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
        sys.stdout.flush()
-       unknown+=[woord for woord in item["text"].split() if woord not in knownwords]
-    # print unknown
+
+       if stemming==0:
+	       unknown+=[woord for woord in item["text"].split() if woord not in knownwords]
+       else:
+	       unknown+=[woord for woord in stemmed(item["text"],stemming_language).split() if woord not in knownwords]
 
     c=Counter(unknown)
 
@@ -94,7 +110,10 @@ def frequencies():
        print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
        sys.stdout.flush()
        #c.update([woord for woord in item["text"].split()])
-       c.update([woord for woord in split2ngrams(item["text"],ngrams)]) 
+       if stemming==0:
+	       c.update([woord for woord in split2ngrams(item["text"],ngrams)]) 
+       else:
+	       c.update([woord for woord in split2ngrams(stemmed(item["text"],stemming_language),ngrams)])  
     return c
 
 
@@ -130,7 +149,12 @@ def coocnet(n,minedgeweight):
         i+=1
         print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
         #words=item["text"].split()
-        words=split2ngrams(item["text"],ngrams)
+
+	if stemming==0:
+		words=split2ngrams(item["text"],ngrams)
+	else:
+		words=split2ngrams(stemmed(item["text"],stemming_language),ngrams)
+
         wordsfilterd=[w for w in words if w in topnwords]		
         uniquecombi = set(combinations(wordsfilterd,2))
         for a,b in uniquecombi:
@@ -250,8 +274,12 @@ def lda(ntopics,minfreq):
     c=frequencies()
     all=collectioncleaned.find(subset,{"text": 1, "_id":0})
     
-    # texts =[[word for word in item["text"].split()] for item in all]
-    texts =[[word for word in split2ngrams(item["text"],ngrams)] for item in all]
+    
+    if stemming ==0:
+	    # oude versie zonder ngrams: texts =[[word for word in item["text"].split()] for item in all]
+	    texts =[[word for word in split2ngrams(item["text"],ngrams)] for item in all]
+    else:
+	    texts =[[word for word in split2ngrams(stemmed(item["text"],stemming_language),ngrams)] for item in all]
     # unicode() is neccessary to convert ngram-tuples to strings
     texts =[[unicode(word) for word in text if c[word]>=minfreq] for text in texts]
     
@@ -279,13 +307,14 @@ def main():
     group=parser.add_mutually_exclusive_group()
     group.add_argument("--frequencies",help="List the N most common words")
     group.add_argument("--frequencies_nodict",help="List the N most common words, but only those which are NOT in the specified dictionary (i.e., list all non-dutch words)")
-    group.add_argument("--lda",help="Perform a Latent Diriclet Allocation analysis with N topics",nargs=2)
+    group.add_argument("--lda",help="Perform a Latent Diriclet Allocation analysis with N topics based on words with a minimum frequency of N2",nargs=2)
     group.add_argument("--ll",help="Compare the loglikelihood of the words within the subset with the whole dataset",action="store_true")
     group.add_argument("--network",help="Create .gdf network file to visualize word-cooccurrances of the N1 most frequently used words with a minimum edgeweight of N2. E.g.: --network 200 50",nargs=2)
     group.add_argument("--search", help="Perform a simple search, no further options possible. E.g.:  --search hema")
     parser.add_argument("--subset", help="Use MongoDB-style .find() filter in form of a Python dict. E.g.:  --subset=\"{'source':'de Volkskrant'}\" or --subset=\"{'\\$text':{'\\$search':'hema'}}\" or a combination of both: --subset=\"{'\\$text':{'\\$search':'hema'}}\",'source':'de Volkskrant'}\"")
     parser.add_argument("--subset2", help="Compare the first subset specified not to the whole dataset but to another subset. Only evaluated together with --ll.")
     parser.add_argument("--ngrams",help="By default, all operations are carried oud on single words. If you want to use bigrams instead, specify --ngram=2, or 3 for trigrams and so on.",nargs=1)
+    parser.add_argument("--stemmer",help='Invokes the snowball stemming algorithm. Specify the language: --stemmer="dutch"',nargs=1)
     # parser.add_argument("--search", help="Use MongoDB-style text search in form of a Python dict. E.g.:  --subset \"{'\\$text':{'\\$search':'hema'}}\"")
     
 
@@ -306,6 +335,14 @@ def main():
     	ngrams=1
     else:
     	ngrams=int(args.ngrams[0])
+
+    global stemming
+    global stemming_language
+    if not args.stemmer:
+	    stemming=0
+    else:
+	    stemming=1
+	    stemming_language=args.stemmer[0]
 
 
     global subset

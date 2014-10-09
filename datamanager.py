@@ -217,6 +217,9 @@ def clean_database():
                 # functie 3: leestekens weg
                 thisart=remove_punctuation(thisart)
 
+
+		# stemming wordt verplaatst naar analysis.py zodat het kan worden toegepast indien nodig, maar weggelaten indien niet gewenst
+
                 # functie 4: Stemming and stopwords removal
                 # dit zouden de nltk-stopwords zijn, maar wij gebruiken onze eigen lijst
                 #stops=set(stopwords.words("dutch"))
