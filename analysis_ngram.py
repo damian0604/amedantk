@@ -252,7 +252,14 @@ def lda(ntopics,minfreq):
 
 
 
-
+def tfidfcospca(n):
+	print "moet nog geimplementeerd worden"
+	'''
+	(1) tf-matrix met n meest voorkomende woorden
+	(2) cosine distance berekenen
+	(3) pca
+	
+	'''
 
 
 
@@ -266,6 +273,7 @@ def main():
     group.add_argument("--lda",help="Perform a Latent Diriclet Allocation analysis with N topics",nargs=2)
     group.add_argument("--ll",help="Compare the loglikelihood of the words within the subset with the whole dataset",action="store_true")
     group.add_argument("--network",help="Create .gdf network file to visualize word-cooccurrances of the N1 most frequently used words with a minimum edgeweight of N2. E.g.: --network 200 50",nargs=2)
+    group.add_argument("--pca",help="Create .a document-tf- matrix with all selected articles and the N most frequent words, transform it to a cosine dissimilarity matrix and carry out a principal component analysis",nargs=1)
     group.add_argument("--search", help="Perform a simple search, no further options possible. E.g.:  --search hema")
     parser.add_argument("--subset", help="Use MongoDB-style .find() filter in form of a Python dict. E.g.:  --subset=\"{'source':'de Volkskrant'}\" or --subset=\"{'\\$text':{'\\$search':'hema'}}\" or a combination of both: --subset=\"{'\\$text':{'\\$search':'hema'},'source':'de Volkskrant'}\"")
     # parser.add_argument("--search", help="Use MongoDB-style text search in form of a Python dict. E.g.:  --subset \"{'\\$text':{'\\$search':'hema'}}\"")
@@ -315,6 +323,9 @@ def main():
 
     if args.lda:
         lda(int(args.lda[0]),int(args.lda[1]))
+
+	if args.pca:
+		tfcospca(int(args.pca[0]))
 
 
     if args.frequencies:

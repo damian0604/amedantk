@@ -14,7 +14,10 @@ from itertools import combinations, chain
 import ast
 from numpy import log
 from gensim import corpora, models, similarities
-
+import numpy as np
+from sklearn.metrics import pairwise_distances
+from scipy.spatial.distance import cosine
+from sklearn.decomposition import PCA
 
 
 # read config file and set up MongoDB
@@ -296,6 +299,61 @@ def lda(ntopics,minfreq):
 
 
 
+def tfcospca(n,comp):
+	print "moet nog geimplementeerd worden"
+	'''
+	(3) pca
+	
+	'''
+
+	c=frequencies()
+	topnwords=[a for a,b in c.most_common(n)]
+	all=collectioncleaned.find(subset,{"text": 1, "_id":0})
+	# TF=np.empty([n,n-1])
+	docs=[]
+	for item in all:
+		if stemming==0:
+			c_item=Counter(split2ngrams(item["text"],ngrams))
+		else:
+			c_item=Counter(split2ngrams(stemmed(item["text"],stemming_language),ngrams))
+		tf_item=[]
+		for word in topnwords:
+			tf_item.append(c_item[word])
+		docs.append(tf_item)
+	TF=np.array(docs).T  # dat transposen is belangrijk .T  wel checken of t eigenlijk klopt
+	print "\nCreated a TF/document matrix which looks like this:"
+	print TF
+	print "As a cosine distance matrix, it looks like this:"
+	COSDIST = 1-pairwise_distances(TF, metric="cosine")
+	print COSDIST
+	print "\nConducting a principal component analysis"
+	# method following http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+	pca = PCA(n_components=4)
+	pca.fit(COSDIST)
+	print "\nExplained variance of each component:",pca.explained_variance_ratio_,"\n"
+	#loadings= pca.transform(COSDIST).tolist()
+	#print len(pca.transform(COSDIST).tolist())
+	loadings= pca.components_.T.tolist()   # let ook hier op het transposen 
+	i=0
+	for row in loadings:
+		print topnwords[i],"\t",
+		print '\t'.join(map(str,row)) 
+		i+=1
+
+
+	# misschien is dit wel een optie http://folk.uio.no/henninri/pca_module/
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -310,6 +368,7 @@ def main():
     group.add_argument("--lda",help="Perform a Latent Diriclet Allocation analysis with N topics based on words with a minimum frequency of N2",nargs=2)
     group.add_argument("--ll",help="Compare the loglikelihood of the words within the subset with the whole dataset",action="store_true")
     group.add_argument("--network",help="Create .gdf network file to visualize word-cooccurrances of the N1 most frequently used words with a minimum edgeweight of N2. E.g.: --network 200 50",nargs=2)
+    group.add_argument("--pca",help="Create .a document-tf- matrix with all selected articles and the N1 most frequent words, transform it to a cosine dissimilarity matrix and carry out a principal component analysis, resulting in N2 components",nargs=2)
     group.add_argument("--search", help="Perform a simple search, no further options possible. E.g.:  --search hema")
     parser.add_argument("--subset", help="Use MongoDB-style .find() filter in form of a Python dict. E.g.:  --subset=\"{'source':'de Volkskrant'}\" or --subset=\"{'\\$text':{'\\$search':'hema'}}\" or a combination of both: --subset=\"{'\\$text':{'\\$search':'hema'}}\",'source':'de Volkskrant'}\"")
     parser.add_argument("--subset2", help="Compare the first subset specified not to the whole dataset but to another subset. Only evaluated together with --ll.")
@@ -329,7 +388,6 @@ def main():
 
 
     args=parser.parse_args()
-    
     global ngrams
     if not args.ngrams:
     	ngrams=1
@@ -392,6 +450,9 @@ def main():
 
     if args.lda:
         lda(int(args.lda[0]),int(args.lda[1]))
+
+    if args.pca:
+        tfcospca(int(args.pca[0]),int(args.pca[1]))
 
 
     if args.frequencies:
