@@ -213,6 +213,8 @@ def llcompare(corpus1,corpus2,llbestand):
 	c = len(corpus1)
 	d = len(corpus2)
 	ll={}
+	e1dict={}
+	e2dict={}
 	
 	for word in corpus1:
 		a=corpus1[word]
@@ -234,6 +236,8 @@ def llcompare(corpus1,corpus2,llbestand):
 			part2=b * log(b/e2)
 		llvalue=2*(part1 + part2)
 		ll[word]=llvalue
+		e1dict[word]=e1
+		e2dict[word]=e2
 	
 	for word in corpus2:
 		if word not in corpus1:
@@ -242,11 +246,13 @@ def llcompare(corpus1,corpus2,llbestand):
 			e2 = d * (a + b) / (c + d)
 			llvalue=2 * (b * log(b/e2))
 			ll[word]=llvalue
-
+			e1dict[word]=0
+			e2dict[word]=e2
+	print "Writing results..."
 	with open(llbestand, mode='w', encoding="utf-8") as f:
-            f.write("ll,word,freqcorp1,freqcorp2\n")
+            f.write("ll,word,freqcorp1,expectedcorp1,freqcorp2,expectedcorp2\n")
             for word,value in sorted(ll.iteritems(), key=lambda (word,value): (value, word), reverse=True):
-                    print value,word
+                    # print value,word
                     try:
                             freqcorp1=corpus1[word]
                     except KeyError:
@@ -255,7 +261,10 @@ def llcompare(corpus1,corpus2,llbestand):
                             freqcorp2=corpus2[word]
                     except KeyError:
                             freqcorp2=0
-                    f.write(str(value)+","+word+","+str(freqcorp1)+","+str(freqcorp2)+"\n")
+                    e1=str(e1dict[word])
+                    e2=str(e2dict[word])
+                    f.write(str(value)+","+word+","+str(freqcorp1)+","+e1+","+str(freqcorp2)+","+e2+"\n")
+	print "Output written to",llbestand
 
 
 
@@ -299,15 +308,14 @@ def lda(ntopics,minfreq):
 
 
 
-def tfcospca(n,comp):
-	print "moet nog geimplementeerd worden"
-	'''
-	(3) pca
+def tfcospca(n,file,comp):
 	
-	'''
-
-	c=frequencies()
-	topnwords=[a for a,b in c.most_common(n)]
+	if n>0 and file=="":
+		c=frequencies()
+		topnwords=[a for a,b in c.most_common(n)]
+	elif n==0 and file!="":
+		topnwords=[line.strip().lower() for line in open(file,mode="r",encoding="utf-8")]
+	
 	all=collectioncleaned.find(subset,{"text": 1, "_id":0})
 	# TF=np.empty([n,n-1])
 	docs=[]
@@ -324,11 +332,11 @@ def tfcospca(n,comp):
 	print "\nCreated a TF/document matrix which looks like this:"
 	print TF
 	print "As a cosine distance matrix, it looks like this:"
-	COSDIST = 1-pairwise_distances(TF, metric="cosine")
+	COSDIST = 1-pairwise_distances(TF, metric="cosine") ## checken of dit klopt. Berekenen we wel deafstand tussen de juiste cellen?  
 	print COSDIST
 	print "\nConducting a principal component analysis"
 	# method following http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-	pca = PCA(n_components=4)
+	pca = PCA(n_components=comp)
 	pca.fit(COSDIST)
 	print "\nExplained variance of each component:",pca.explained_variance_ratio_,"\n"
 	#loadings= pca.transform(COSDIST).tolist()
@@ -369,6 +377,8 @@ def main():
     group.add_argument("--ll",help="Compare the loglikelihood of the words within the subset with the whole dataset",action="store_true")
     group.add_argument("--network",help="Create .gdf network file to visualize word-cooccurrances of the N1 most frequently used words with a minimum edgeweight of N2. E.g.: --network 200 50",nargs=2)
     group.add_argument("--pca",help="Create .a document-tf- matrix with all selected articles and the N1 most frequent words, transform it to a cosine dissimilarity matrix and carry out a principal component analysis, resulting in N2 components",nargs=2)
+    group.add_argument("--pca_ownwords",help="Create .a document-tf- matrix with all selected articles and the words specified in an inputfile (arg1), transform it to a cosine dissimilarity matrix and carry out a principal component analysis, resulting in N (arg2) components",nargs=2)
+
     group.add_argument("--search", help="Perform a simple search, no further options possible. E.g.:  --search hema")
     parser.add_argument("--subset", help="Use MongoDB-style .find() filter in form of a Python dict. E.g.:  --subset=\"{'source':'de Volkskrant'}\" or --subset=\"{'\\$text':{'\\$search':'hema'}}\" or a combination of both: --subset=\"{'\\$text':{'\\$search':'hema'}}\",'source':'de Volkskrant'}\"")
     parser.add_argument("--subset2", help="Compare the first subset specified not to the whole dataset but to another subset. Only evaluated together with --ll.")
@@ -452,7 +462,11 @@ def main():
         lda(int(args.lda[0]),int(args.lda[1]))
 
     if args.pca:
-        tfcospca(int(args.pca[0]),int(args.pca[1]))
+        tfcospca(int(args.pca[0]),"",int(args.pca[1]))
+        
+    if args.pca_ownwords:
+        tfcospca(0,args.pca_ownwords[0],int(args.pca_ownwords[1]))
+
 
 
     if args.frequencies:

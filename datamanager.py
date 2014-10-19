@@ -144,7 +144,7 @@ def insert_lexisnexis(pathwithlnfiles,recursive):
 			art_byline=byline[i+1]
 		except:
 			art_byline="NA"
-		art={"source":art_source,"date":art_date,"section":art_section,"language":art_language,"length":art_length,"text":art_text,"byline":art_byline,"from-database":"lexisnexis"}
+		art={"source":art_source.lower(),"date":art_date,"section":art_section.lower(),"language":art_language.lower(),"length":art_length,"text":art_text,"byline":art_byline,"from-database":"lexisnexis"}
 		article_id=collection.insert(art)
 
 
