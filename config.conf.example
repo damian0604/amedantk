@@ -14,3 +14,5 @@ dictionary=/Users/path/to/your/dictionarywithwords.txt
 networkoutput=/Users/path/to/your/desired_output_network.gdf
 loglikelihoodoutput=/Users/path/to/your/desired_output_ll.csv
 stopwords=/Users/path/to/your/listwithstopwords.txt
+cosdistoutput=/Users/path/to/your/cosinedistancematrix.csv
+compscoreoutput=/Users/path/to/your/datasetwithcomponentscores.csv
