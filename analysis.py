@@ -358,14 +358,14 @@ def tfcospca(n,file,comp,varimax):
 		for word in topnwords:
 			tf_item.append(c_item[word])
 		docs.append(tf_item)
-	TF=np.array(docs).T  # dat transposen is belangrijk .T  wel checken of t eigenlijk klopt
-	print "\nCreated a TF/document matrix which looks like this:"
+	TF=np.array(docs).T
+	print "\n\nCreated a {} by {} TF-document matrix which looks like this:".format(*TF.shape)
 	print TF
-	print "As a cosine distance matrix, it looks like this:"
-	COSDIST = 1-pairwise_distances(TF, metric="cosine") ## checken of dit klopt. Berekenen we wel de afstand tussen de juiste cellen?  
+	COSDIST = 1-pairwise_distances(TF, metric="cosine") 
+	print "\nAs a {} by {} cosine distance matrix, it looks like this:".format(*COSDIST.shape)
 	print COSDIST
 
-	print "\nConducting a principal component analysis"
+	print "\nConducting a principal component analysis..."
 	# method following http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 	pca = PCA(n_components=comp)
 	# volgende regel is eigenlijk overbodig, zouden niet moeten standardiseren (alles toch op dezelfde schaal gemeten + cosinus-transformatie gedaan), maar in het kader van vergelijkbaarheid met SPSS/STATA/R-output doen we het toch...
@@ -380,11 +380,11 @@ def tfcospca(n,file,comp,varimax):
 	loadings= pca.components_.T.tolist()   # let ook hier op het transposen 
 	if varimax:
 		loadings=rotvarimax(pca.components_.T).tolist()
-		print "The rotated component loadings (varimax) are:"
+		print "\nThe rotated component loadings (varimax) are:"
 
 	else:
 		loadings= pca.components_.T.tolist()   # let ook hier op het transposen 
-		print "The component loadings are:"
+		print "\nThe component loadings are:"
 
 
 	i=0

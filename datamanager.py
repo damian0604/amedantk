@@ -191,11 +191,13 @@ def clean_database():
                 i+=1
                 print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
                 sys.stdout.flush()
-                thisart=art["text"]
+                # newlines moeten eruit (vandaar .replace) om "ABN\nAmro" te kunnen vervangen. Maar nu verdwijnen ook alinea's (\n\n), we zouden kunnen overwegen hier een onderscheid te maken. Maar hoeft nu even niet.
+                thisart=art["text"].replace("\n"," ")
                 #print thisart
                 # functie 1: vervangen nav vervanglijstke
                 thisart=pattern.sub(lambda m: repldict[re.escape(m.group(0))], thisart)
                 # TODO: CHECKEN WAT ER GEBEURT ALS WE EN "KLM AIR FRACNE" EN "AIR FRANCE" ALS ZOEKTERM HEBBEN
+                # OPLOSSING: Prioriteiten toekennen. MISSCHIEN TWEE LIJSTJES MAKEN, EERST DE ENE DOEN (KLM OPEN vervangen door KLM_OPEN), daarna de algemene (KLM door KLM_Air_France)
 
                 # functie 1b: als iemand een keer met z'n volledige naam genoemd wordt, ook de volgende keren dat alleen z'n achternaam wordt genoemd deze vervangen
                 #print thisart

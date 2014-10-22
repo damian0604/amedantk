@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 from io import open
 import json
-
+import ConfigParser
 # TODO
 
 '''
@@ -24,29 +24,39 @@ Hyundai Heavy Industries
 '''
 
 
+config = ConfigParser.RawConfigParser()
+config.read('config.conf')
+
+nlwoordenbestand=config.get('files','dictionary')
+#naambestanden=config.get('files','ownfileswithnames')
+ownreplacements=[config.get('files','ownfilesreplacements')]   # er zouden ook meer bestanden in die lijst kunnen staan, functie ontbreekt nu 
+ownreplacements_lastnames=[config.get('files','ownfilesreplacementspeople')] # er zouden ook meer bestanden in die lijst kunnen staan, functie ontbreekt nu 
+
+outputbestand=config.get('files','replacementlist')
+outputbestand2=config.get('files','replacementlistlastnames')
 
 # bestanden specificeren
 # bestand met (alle) Nederlandse woorden, één per regel
-nlwoordenbestand="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/OpenTaal-210G-basis-gekeurd.txt"
+# nlwoordenbestand="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/OpenTaal-210G-basis-gekeurd.txt"
 # bestanden met namen (voornaam achternaam, één per regel)
-naambestanden=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/politici_voornaam_achternaam.txt"]
+#naambestanden=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/politici_voornaam_achternaam.txt"]
 # own tab-sperated files with two columns (first column original, second replacement)
-ownreplacements=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/vervanglijstje.tab"]
+#ownreplacements=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/vervanglijstje.tab"]
 
 # own tab-sperated files with two columns (first column original, second replacement) - special for lastnames
-ownreplacements_lastnames=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/vervanglijstje_speciaal_menselijke achternamen.tab"]
+#ownreplacements_lastnames=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/vervanglijstje_speciaal_menselijke achternamen.tab"]
 
 
 
 # lijst met bedrijven 
-lijstenmetbedrijven=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/lijst_bedrijven_500meestinvloedrijkinNL.txt","/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/lijst_bedrijven_multinationals_top2000.txt"]
+#lijstenmetbedrijven=["/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/lijst_bedrijven_500meestinvloedrijkinNL.txt","/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/input/lijst_bedrijven_multinationals_top2000.txt"]
 
 
 # Waar de output opslaan?
-outputbestand="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/output/vervanglijstje.json"
+#outputbestand="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/output/vervanglijstje.json"
 
 # een nog een outputbestand, nu voor achternamen (afzonderlijk)
-outputbestand2="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/output/vervanglijstje_achternamen.json"
+#outputbestand2="/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen/3. Nieuwprogramma/output/vervanglijstje_achternamen.json"
 
 
 
@@ -103,6 +113,7 @@ def replaceown(inputfiles):
 		with open(fname,mode="r",encoding="utf-8") as fi:
 			for line in fi:
 				bothcolumns=line.strip().split("\t")
+				#print bothcolumns
 				repldict[bothcolumns[0]]=bothcolumns[1]
 	return repldict
 	
@@ -110,16 +121,16 @@ def replaceown(inputfiles):
 def main():
 	complrepldict={}
 	
-        # STAP 1: VASTE UITDRUKKINGEN ('s ochtends --> 's_ochtends)
-        alldutchwords=[line.strip() for line in open(nlwoordenbestand,mode="r",encoding="utf-8")]
+	# STAP 1: VASTE UITDRUKKINGEN ('s ochtends --> 's_ochtends)
+	alldutchwords=[line.strip() for line in open(nlwoordenbestand,mode="r",encoding="utf-8")]
 	complrepldict.update(replacespaces(alldutchwords))
 
-        # STAP 2: EIGEN VERVANGLIJSTJE (namen, bedrijven, ...), zelf aangemaakt tab-seperated file
-        complrepldict.update(replaceown(ownreplacements))
+	# STAP 2: EIGEN VERVANGLIJSTJE (namen, bedrijven, ...), zelf aangemaakt tab-seperated file
+	complrepldict.update(replaceown(ownreplacements))
 	
 
-        # ANDERE OPTIES:
-        # complrepldict.update(replacenames(naambestanden))
+	# ANDERE OPTIES:
+	# complrepldict.update(replacenames(naambestanden))
 	# complrepldict.update(replacebedrijf(lijstenmetbedrijven))
 
 	with open(outputbestand,mode="w",encoding="utf-8") as fo:

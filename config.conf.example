@@ -16,3 +16,6 @@ loglikelihoodoutput=/Users/path/to/your/desired_output_ll.csv
 stopwords=/Users/path/to/your/listwithstopwords.txt
 cosdistoutput=/Users/path/to/your/cosinedistancematrix.csv
 compscoreoutput=/Users/path/to/your/datasetwithcomponentscores.csv
+ownfileswithnames=/Users/path/to/your/politicians_firstname_lastname.txt
+ownfilesreplacements=/Users/path/to/your/tabfilewithreplacements1.tab
+ownfilesreplacementspeople=/Users/path/to/your/vervanglijstje_speciaal_menselijke achternamen.tab
