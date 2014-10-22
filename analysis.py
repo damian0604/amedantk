@@ -324,7 +324,13 @@ def lda(ntopics,minfreq):
 
 
 
-def tfcospca(n,file,comp):
+def tfcospca(n,file,comp,varimax):
+	'''
+	n = N most frequent words to include
+	file = alternative to n, use words from inputfile file
+	comp = number of components or, if 0<n<1, min eigenvalue of each component
+	varimax = bool to indicate whether a varimax rotation should be performed 
+	'''
 	
 	if n>0 and file=="":
 		c=frequencies()
@@ -370,16 +376,34 @@ def tfcospca(n,file,comp):
 	print "\nExplained variance of each component:",pca.explained_variance_ratio_,"\n"
 	#loadings= pca.transform(COSDIST).tolist()
 	#print len(pca.transform(COSDIST).tolist())
+	
 	loadings= pca.components_.T.tolist()   # let ook hier op het transposen 
+	if varimax:
+		loadings=rotvarimax(pca.components_.T).tolist()
+		print "The rotated component loadings (varimax) are:"
+
+	else:
+		loadings= pca.components_.T.tolist()   # let ook hier op het transposen 
+		print "The component loadings are:"
+
+
 	i=0
-	print "The component loadings are:"
 	for row in loadings:
 		print topnwords[i],"\t\t",
 		print '\t'.join(["{:.3f}".format(loading) for loading in row]) 
 		i+=1
 	i=0
+	
+	
+	
 	print "\n\nThe transformed scores are:"
-	scores=pca.transform(COSDIST).tolist()
+	
+	# DIT HIER KLOPT NIET (iig vlgs SPSS/STATA):
+	# scores=pca.transform(COSDIST).tolist()
+	# Dus maar zelf doen:
+	
+	scores=np.dot(COSDIST,loadings)
+	
 	for row in scores:
 		print topnwords[i],"\t\t",
 		print '\t'.join(["{:.3f}".format(loading) for loading in row]) 
@@ -387,17 +411,24 @@ def tfcospca(n,file,comp):
 	
 	# save loadings to a dataset
 	
-	print "For further analysis, a dataset with the component loadings for each document is saved to",compscoreoutputfile
+	print "\nFor further analysis, a dataset with the component loadings for each document is saved to",compscoreoutputfile
 	i=0
-	scores=pca.transform(TF.T).tolist()
+	
+	# DAN IS DUS OOK DIT FOUT:
+	# scores=pca.transform(TF.T).tolist()
+	# nieuwe oplossing:
+	
+	scoresperdoc=np.dot(TF.T,loadings)
+
+	
 	with open(compscoreoutputfile,"w",encoding="utf-8") as fo:
-		for row in scores:
+		for row in scoresperdoc:
 			fo.write(unicode(foroutput_id[i])+","+foroutput_source[i]+","+foroutput_firstwords[i]+",")
 			fo.write(','.join(["{:0.3f}".format(loading) for loading in row]))
 			fo.write("\n")
 			i+=1
 
-	print "For further analysis, a copy of the cosine distance matrix is saved to",cosdistoutputfile
+	print "\nFor further analysis, a copy of the cosine distance matrix is saved to",cosdistoutputfile
 	# hiervoor heb je numpy > 1.7 nodig (vanwege header)
 	#np.savetxt(cosdistoutputfile,COSDIST,fmt=str("%.6f"),delimiter=",",header=",".join(topnwords))
 	# om te voorkomen dat numpy 1.7 of hoger nodig is, workaround zonder "header"
@@ -410,7 +441,22 @@ def tfcospca(n,file,comp):
 	os.remove(cosdistoutputfile+"TEMP")
 
 
-
+def rotvarimax(Phi, gamma = 1, q = 20, tol = 1e-6):
+    from numpy import eye, asarray, dot, sum, diag
+    from numpy.linalg import svd
+    p,k = Phi.shape
+    R = eye(k)
+    d=0
+    for i in xrange(q):
+        d_old = d
+        Lambda = dot(Phi, R)
+        u,s,vh = svd(dot(Phi.T,asarray(Lambda)**3 - (gamma/p) * dot(Lambda, diag(diag(dot(Lambda.T,Lambda))))))
+        R = dot(u,vh)
+        d = sum(s)
+        if d/d_old < tol: break
+    print "The following Component Transformation Matrix has been determined for the rotation:"
+    print R
+    return dot(Phi, R)
 
 
 
@@ -439,6 +485,7 @@ def main():
     group.add_argument("--search", metavar="SEARCHTERM",help="Perform a simple search, no further options possible. E.g.:  --search hema")
     parser.add_argument("--subset", help="Use MongoDB-style .find() filter in form of a Python dict. E.g.:  --subset=\"{'source':'de Volkskrant'}\" or --subset=\"{'\\$text':{'\\$search':'hema'}}\" or a combination of both: --subset=\"{'\\$text':{'\\$search':'hema'}}\",'source':'de Volkskrant'}\"")
     parser.add_argument("--subset2", help="Compare the first subset specified not to the whole dataset but to another subset. Only evaluated together with --ll.")
+    parser.add_argument("--varimax", help="If specified with --pca or --pca_ownwords, a varimax rotation is performed",action="store_true")
     parser.add_argument("--ngrams",metavar="N",help="By default, all operations are carried oud on single words. If you want to use bigrams instead, specify --ngram=2, or 3 for trigrams and so on.",nargs=1)
     parser.add_argument("--stemmer",metavar="language",help='Invokes the snowball stemming algorithm. Specify the language: --stemmer="dutch"',nargs=1)
     # parser.add_argument("--search", help="Use MongoDB-style text search in form of a Python dict. E.g.:  --subset \"{'\\$text':{'\\$search':'hema'}}\"")
@@ -519,10 +566,10 @@ def main():
         lda(int(args.lda[1]),int(args.lda[0]))
 
     if args.pca:
-        tfcospca(int(args.pca[0]),"",float(args.pca[1]))
+        tfcospca(int(args.pca[0]),"",float(args.pca[1]),args.varimax)
         
     if args.pca_ownwords:
-        tfcospca(0,args.pca_ownwords[0],float(args.pca_ownwords[1]))
+        tfcospca(0,args.pca_ownwords[0],float(args.pca_ownwords[1]),args.varimax)
 
 
 
