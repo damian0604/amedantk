@@ -66,6 +66,7 @@ outputbestand2=config.get('files','replacementlistlastnames')
 def replacespaces(listwithwords):
 	repldict={}
 	wordswithspace=[woord for woord in listwithwords if woord.find(" ")>-1]
+	print len(wordswithspace),"expressions containing spaces (from the dictionary) have been added to the replacement list"
 	for woord in wordswithspace:
 		repldict[woord]=woord.replace(" ","_")
 	return repldict
@@ -109,12 +110,14 @@ def replacebedrijf(lijstenmetbedrijven):
 def replaceown(inputfiles):
 	repldict={}
 	for fname in inputfiles:
-                print fname
+		i=0
 		with open(fname,mode="r",encoding="utf-8") as fi:
 			for line in fi:
+				i+=1
 				bothcolumns=line.strip().split("\t")
 				#print bothcolumns
 				repldict[bothcolumns[0]]=bothcolumns[1]
+		print i,"expressions from",fname,"have been added to the replacement list"
 	return repldict
 	
 
@@ -136,7 +139,8 @@ def main():
 	with open(outputbestand,mode="w",encoding="utf-8") as fo:
 		fo.write(unicode(json.dumps(complrepldict,ensure_ascii=False)))
 	
-	print "YOU'RE READY!"
+	print "Finished writing",outputbestand
+	print "YOU'RE READY WITH THE GENERAL REPLACEMENT LIST!\n"
 	
 
 
@@ -154,7 +158,8 @@ def main():
 	with open(outputbestand2,mode="w",encoding="utf-8") as fo:
 		fo.write(unicode(json.dumps(complrepldict2,ensure_ascii=False)))
 	
-	print "YOU'RE READY!"
+	print "Finished writing",outputbestand2
+	print "YOU'RE READY WITH THE REPLACEMENT LIST FOR LAST NAMES/FULL NAMES!\n"
 
 
 

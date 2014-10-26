@@ -59,10 +59,13 @@ def insert_lexisnexis(pathwithlnfiles,recursive):
 				if isfile(join(path,f)) and splitext(f)[1].lower()==".txt":
 					alleinputbestanden.append(join(path,f))
 	else:
-		alleinputbestanden = [ f for f in listdir(pathwithlnfiles) if isfile(join(pathwithlnfiles,f)) ]
+		#print  listdir(pathwithlnfiles)
+		alleinputbestanden = [ join(pathwithlnfiles,f) for f in listdir(pathwithlnfiles) if isfile(join(pathwithlnfiles,f)) and splitext(f)[1].lower()==".txt" ]
+		print alleinputbestanden
 	artikel=0
 	for bestand in alleinputbestanden:
-		with open(bestand,"r") as f:
+		print "Now processing",bestand
+		with open(bestand,"r",encoding="utf-8") as f:
 			i=0
 			for line in f:
 				i=i+1
@@ -169,19 +172,26 @@ def clean_database():
         # get info on what has to be replaced
         with open(replacementlistfile,mode="r",encoding="utf-8") as fi:
                 repldict=json.load(fi)
-        # spaties etc escapen voor de REGEXPs
-        repldict = dict((re.escape(k), v) for k, v in repldict.iteritems())
+        # spaties etc escapen voor de REGEXPs   <-- nee, we veronderstellen nu dat t vervanglijstje uit geldige regexp's bestaat
+        # repldict = dict((re.escape(k), v) for k, v in repldict.iteritems())
+        
+        #print repldict.keys()
         # pattern = re.compile("|".join(repldict.keys()))
         # we want whole words only, therefore we use the following regexp adding the word boundries \b:
-        pattern = re.compile("\\b|\\b".join(repldict.keys()))        
+        # niet meer nodig ivm andere strategie (RegEXP in vervanglijstje)
+        #pattern = re.compile("\\b|\\b".join(repldict.keys()))        
+        
+        replpatterns=set(re.compile("\\b"+k+"\\b") for k in repldict)
+                	
+        
         
 
         # hetzelfde nog een keer voor achternamen
         with open(replacementlistlastnamesfile,mode="r",encoding="utf-8") as fi:
-                repldict2=json.load(fi)
-        repldict2 = dict((re.escape(k), v) for k, v in repldict2.iteritems())
-        pattern2 = re.compile("\\b|\\b".join(repldict2.keys()))        
-        pattern2_fullname = re.compile("\\b|\\b".join(repldict2.values()))        
+                repldictpersons=json.load(fi)
+        #repldictpersons = dict((re.escape(k), v) for k, v in repldictpersons.iteritems())
+        #pattern2 = re.compile("\\b|\\b".join(repldictpersons.keys()))
+        # pattern2_fullname = re.compile("\\b|\\b".join(repldictpersons.values()))
 
         # processing articles one by one
         allarticles=collection.find()
@@ -191,27 +201,29 @@ def clean_database():
                 i+=1
                 print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
                 sys.stdout.flush()
-                # newlines moeten eruit (vandaar .replace) om "ABN\nAmro" te kunnen vervangen. Maar nu verdwijnen ook alinea's (\n\n), we zouden kunnen overwegen hier een onderscheid te maken. Maar hoeft nu even niet.
                 thisart=art["text"].replace("\n"," ")
                 #print thisart
                 # functie 1: vervangen nav vervanglijstke
-                thisart=pattern.sub(lambda m: repldict[re.escape(m.group(0))], thisart)
-                # TODO: CHECKEN WAT ER GEBEURT ALS WE EN "KLM AIR FRACNE" EN "AIR FRANCE" ALS ZOEKTERM HEBBEN
-                # OPLOSSING: Prioriteiten toekennen. MISSCHIEN TWEE LIJSTJES MAKEN, EERST DE ENE DOEN (KLM OPEN vervangen door KLM_OPEN), daarna de algemene (KLM door KLM_Air_France)
-
-                # functie 1b: als iemand een keer met z'n volledige naam genoemd wordt, ook de volgende keren dat alleen z'n achternaam wordt genoemd deze vervangen
-                #print thisart
-                for naam in pattern2_fullname.findall(thisart):
-                        #print naam,"mentioned, so we're also gonna replace",
-                        varianten=[k for k,v in repldict2.items() if v==naam]
-                        for naam in varianten:
-                                #print naam,"by",repldict2[naam]
-                                # DE .lower()s hebben we toegevoegd om het van der Laan/Van der Laan probleem op te lossen
-                                thisart=re.sub("\\b"+naam.lower()+"\\b",repldict2[naam],thisart.lower())
-                #print thisart
-
-				
-                                
+                #thisart=pattern.sub(lambda m: repldict[re.escape(m.group(0))], thisart)                
+                #thisart=pattern.sub(repldict[m.group(0)], thisart)
+                # werkt niet want match is niet identiek aan key (match kan "ABN Amro" zijn, maar key is "ABN.Amro")
+                # nieuwe methode:
+                #for k in repldict :
+                #	thisart=re.sub("\\b"+k+"\\b",repldict[k],thisart)
+                numbsub=0
+                for pat in replpatterns:
+                    subst=pat.subn(repldict[pat.pattern[2:-2]],thisart)   #[2:-2] to strip the \b 
+                    thisart=subst[0]
+                    numbsub+=subst[1]
+                 # only if sth has been substituted at all, check if it's a last name that has to be substituted as well
+                 # functie 1b: als iemand een keer met z'n volledige naam genoemd wordt, ook de volgende keren dat alleen z'n achternaam wordt genoemd deze vervangen
+                if numbsub>0:
+                    for k,v in repldictpersons.iteritems():
+                        #print "check",v
+                        if v in thisart:
+                           thisart.replace(k,v)
+                           #print "Replaced",k,"by",v
+                
                 '''
                 # functie 2: lowercase
                 thisart=thisart.lower()
@@ -240,7 +252,7 @@ def clean_database():
                 
                 thisart=remove_punctuation(thisart.lower())
                 #print thisart
-                stops=[line.strip() for line in open(stopwordsfile,mode="r",encoding="utf-8")]
+                stops=[line.strip().lower() for line in open(stopwordsfile,mode="r",encoding="utf-8")]
                 tas=thisart.split()
                 thisart=""
                 for woord in tas:
@@ -304,10 +316,13 @@ def main():
                 insert_lexisnexis(args.insert_ln,args.recursive)
         
         if args.clean:
-                clean_database()
+                print "Do you REALLY want to clean the whole collection",collectionname,"within the database",databasename,"right now? This can take VERY long, and you might consider doing this overnight."
+                cont=raw_input('Type "I have time!" and hit Return if you want to continue: ')
+                if cont=="I have time!":
+                    clean_database()
+                else:
+                    print "OK, maybe next time."
                 
-
-                        # insert_lexisnexis("/Users/damian/Dropbox/uva/onderzoeksprojecten_lopend/2014-damianjeroen_Dataverzameling project Bedrijven in het Nieuws/Unix-LF_zonderBOM/2. AD",True)
 	
 
 
