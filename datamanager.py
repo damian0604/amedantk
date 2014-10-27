@@ -12,6 +12,7 @@ import ConfigParser
 import argparse
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
+from collections import defaultdict
 
 # read config file and set up MongoDB
 config = ConfigParser.RawConfigParser()
@@ -152,6 +153,43 @@ def insert_lexisnexis(pathwithlnfiles,recursive):
 
 
 
+def adhocclean(bestand):
+	repldict={}
+	with open(bestand,"r",encoding="utf-8") as fi:
+		for line in fi:
+			comline=line.strip().split("\t")
+			repldict[comline[0]]=comline[1]
+	print "It contains the following rules:"
+	print repldict	
+	replpatterns=set(re.compile("\\b"+k+"\\b") for k in repldict)
+	allarticles=collectioncleaned.find()
+	aantal=collectioncleaned.count()
+	i=0
+	numbsub=defaultdict(int)
+	for art in allarticles:
+		i+=1
+		print "\r",i,"/",aantal," or ",int(i/aantal*100),"%",
+		sys.stdout.flush()
+		thisart=art["text"]
+		doesthisartneedupdate=0
+		for pat in replpatterns:
+			subst=pat.subn(repldict[pat.pattern[2:-2]],thisart)   #[2:-2] to strip the \b 
+			thisart=subst[0]
+			numbsub[pat.pattern[2:-2]]+=subst[1]
+			doesthisartneedupdate+=subst[1]
+		if doesthisartneedupdate>0:
+			print "Updating article",art["_id"]
+			#print collectioncleaned.find({"_id":art["_id"]})[0]
+			collectioncleaned.update({"_id":art["_id"]},{"$set":{"text":thisart}})
+	print
+	for k in numbsub:
+		print k,"replaced",numbsub[k],"times"
+	print "Done"
+	
+
+
+
+
 def clean_database():
         
         '''
@@ -277,6 +315,8 @@ def main():
         group.add_argument("--overview_cleaned", help="Give an overview of the data stored in the cleaned collection",action="store_true")
         group.add_argument("--insert_ln", help="Inserts LexisNexis articles. Name the folder with the input data after --insert_ln",)
         group.add_argument("--clean", help="Creates a cleaned version of your collection by removing punctuation and replacing words as specified in the configuration files.", action="store_true")
+        group.add_argument("--adhocclean", help="Creates a cleaned version of your collection by removing punctuation and replacing words as specified in the configuration files.", nargs=1,metavar="FILE")
+
         group.add_argument("--delete_all", help="Deletes everything in your database (!!!)",action="store_true")
         parser.add_argument("--recursive", help="Indicates that all subfolders are processed as well", action="store_true")
         # parser.add_argument("folder", help = "The folder in which data to be inserted is stored", nargs="?")
@@ -284,7 +324,6 @@ def main():
         args = parser.parse_args()
 
         if args.delete_all:
-                #print "NOG NIET GEIMPLEMENTEERD"
                 print "Do you REALLY want to ERASE the whole collection",collectionname,"within the database",databasename,"?"
                 cont=raw_input('Type "Hell, yeah!" and hit Return if you want to continue: ')
                 if cont=="Hell, yeah!":
@@ -323,6 +362,10 @@ def main():
                 else:
                     print "OK, maybe next time."
                 
+        if args.adhocclean:
+        	bestand=args.adhocclean[0]
+        	print "Re-processing the cleaned database with the instructions provided in",bestand,"\n"
+        	adhocclean(bestand)
 	
 
 
